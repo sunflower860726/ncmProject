@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <properties>
+    </properties>
+
+    <settings>
+        <setting name="logImpl" value="SLF4J"/>
+        <setting name="useGeneratedKeys" value="true"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <setting name="autoMappingBehavior" value="FULL"/>
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="proxyFactory" value="JAVASSIST"/>
+        <setting name="aggressiveLazyLoading" value="false"/>
+        <!--<setting name="defaultExecutorType" value="BATCH"/>-->
+    </settings>
+
+    <typeAliases>
+    </typeAliases>
+
+    <typeHandlers>
+        <typeHandler handler="com.softmotions.weboot.mb.ArrayTypeHandler"/>
+        <typeHandler handler="com.softmotions.weboot.mb.InputStreamTypeHandler"/>
+    </typeHandlers>
+
+    <environments default="development">
+
+        <environment id="pgtest">
+            <transactionManager type="JDBC">
+            </transactionManager>
+            <dataSource type="POOLED">
+                <property name="driver" value="${JDBC.driver}"/>
+                <property name="url" value="${JDBC.url}"/>
+                <property name="defaultAutoCommit" value="false"/>
+            </dataSource>
+        </environment>
+
+        <environment id="development">
+            <transactionManager type="JDBC">
+            </transactionManager>
+            <dataSource type="POOLED">
+                <property name="driver" value="${JDBC.driver}"/>
+                <property name="url" value="${JDBC.url}"/>
+                <property name="username" value="${JDBC.username}"/>
+                <property name="password" value="${JDBC.password}"/>
+                <property name="defaultAutoCommit" value="false"/>
+            </dataSource>
+        </environment>
+
+        <environment id="production">
+            <transactionManager type="JDBC">
+            </transactionManager>
+            <dataSource type="POOLED">
+                <property name="driver" value="${JDBC.driver}"/>
+                <property name="url" value="${JDBC.url}"/>
+                <property name="username" value="${JDBC.username}"/>
+                <property name="password" value="${JDBC.password}"/>
+                <property name="defaultAutoCommit" value="false"/>
+            </dataSource>
+        </environment>
+    </environments>
+
+    <databaseIdProvider type="DB_VENDOR">
+        <property name="SQL Server" value="SQLSERVER"/>
+        <property name="DB2" value="DB2"/>
+        <property name="Oracle" value="ORACLE"/>
+        <property name="H2" value="H2"/>
+        <property name="PostgreSQL" value="POSTGRES"/>
+        <property name="MySQL" value="MYSQL"/>
+    </databaseIdProvider>
+
+
+    <mappers>
+        <mapper resource="com/softmotions/ncms/db/asm-cache-mapper.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/AsmDAO.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/AsmRS.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/PageRS.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/PageSecurityService.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/AsmEventsListener.xml"/>
+        <mapper resource="com/softmotions/ncms/media/MediaRS.xml"/>
+        <mapper resource="com/softmotions/ncms/user/UserEnvRS.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/am/AsmAttributeManagerContext.xml"/>
+        <mapper resource="com/softmotions/ncms/asm/am/AsmMedialineAM.xml"/>
+        <mapper resource="com/softmotions/ncms/rds/RefDataStore.xml"/>
+        <mapper resource="com/softmotions/ncms/update/UpdateInitializer.xml"/>
+        <mapper resource="com/softmotions/ncms/mtt/MttRuleRS.xml"/>
+        <mapper resource="com/softmotions/ncms/mtt/http/MttHttpFilter.xml"/>
+        <mapper resource="com/softmotions/ncms/mtt/tp/MttTpRS.xml"/>
+    </mappers>
+</configuration>

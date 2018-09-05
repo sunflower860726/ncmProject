@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>softmotions</groupId>
+        <artifactId>ncms-base</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>ncms-site-archetype</artifactId>
+    <version>1.1-SNAPSHOT</version>
+    <packaging>maven-archetype</packaging>
+
+    <properties>
+        <maven.archetype.plugin.version>2.4</maven.archetype.plugin.version>
+        <gettingstarted.app.groupId>com.softmotions.ncmstart</gettingstarted.app.groupId>
+        <gettingstarted.app.artifactId>ncmsapp</gettingstarted.app.artifactId>
+        <gettingstarted.app.version>0.1.0</gettingstarted.app.version>
+        <gettingstarted.app.name>Getting started with nCMS</gettingstarted.app.name>
+    </properties>
+
+    <build>
+        <defaultGoal>package</defaultGoal>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.archetype</groupId>
+                <artifactId>archetype-packaging</artifactId>
+                <version>${maven.archetype.plugin.version}</version>
+            </extension>
+        </extensions>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-archetype-plugin</artifactId>
+                <version>${maven.archetype.plugin.version}</version>
+                <configuration>
+                    <skip>${skipITs}</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+                <executions>
+                    <execution>
+                        <!-- copy the Getting Started app to target/gettingstarted in the install phase -->
+                        <id>copy-resources</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <encoding>UTF-8</encoding>
+                            <outputDirectory>${project.build.directory}/ncmsapp</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>
+                                        ${project.build.directory}/test-classes/projects/gettingstarted/project/ncmsapp
+                                    </directory>
+                                </resource>
+                            </resources>
+                            <includeEmptyDirs>true</includeEmptyDirs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+    </build>
+
+</project>

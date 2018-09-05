@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.softmotions.ncms.asm.AsmRS">
+
+    <cache-ref namespace="com.softmotions.ncms.db.cache.asm"/>
+
+    <select id="select" resultType="map" parameterType="map">
+        SELECT
+            asm.id            AS "id",
+            asm.name          AS "name",
+            asm.hname         AS "hname",
+            asm.description   AS "description",
+            asm.type          AS "type",
+            asm.published     AS "published",
+            asm.template      AS "template"
+        FROM ASMS asm
+        <where>
+            <if test="type != null">AND asm.type = #{type}</if>
+            <if test="name != null">AND (LOWER(asm.name) LIKE LOWER(#{name}) OR LOWER(asm.description) LIKE LOWER(#{name}))</if>
+            <if test="template != null">AND asm.template = #{template}</if>
+            <if test="template_mode != null">AND asm.template_mode = #{template_mode}</if>
+            <if test="name_restriction != null">AND asm.name LIKE #{name_restriction}</if>
+            <if test="exclude != null">AND asm.id != #{exclude}</if>
+            <if test="roles != null">
+                AND (
+                    <trim prefixOverrides="AND | OR">
+                    <if test="roles.length > 0">
+                        EXISTS (
+                            SELECT r.asm_id FROM ASM_ACCESS_ROLES AS r
+                            WHERE
+                                r.asm_id = asm.id
+                                AND r.role_name IN
+                                <foreach collection="roles" item="role" open="(" close=")" separator=",">
+                                    #{role}
+                                </foreach>
+                        )
+                    </if>
+                        OR NOT EXISTS (
+                            SELECT r.asm_id FROM ASM_ACCESS_ROLES AS r
+                            WHERE r.asm_id = asm.id
+                        )
+                    </trim>
+                )
+            </if>
+        </where>
+        <if test="CQ_ORDERBY">ORDER BY ${CQ_ORDERBY}</if>
+        <if test="CQ_LIMIT">
+            LIMIT ${CQ_LIMIT}
+            <if test="CQ_OFFSET">
+                OFFSET ${CQ_OFFSET}
+            </if>
+        </if>
+    </select>
+
+    <select id="count" resultType="int" parameterType="map">
+        SELECT COUNT(*) FROM ASMS AS asm
+        <where>
+            <if test="type != null">AND asm.type = #{type}</if>
+            <if test="name != null">AND (LOWER(asm.name) LIKE LOWER(#{name}) OR LOWER(asm.description) LIKE LOWER(#{name}))</if>
+            <if test="template != null">AND asm.template = #{template}</if>
+            <if test="template_mode != null">AND asm.template_mode = #{template_mode}</if>
+            <if test="name_restriction != null">AND asm.name LIKE #{name_restriction}</if>
+            <if test="exclude != null">AND asm.id != #{exclude}</if>
+            <if test="roles != null and roles.length > 0">
+                AND (
+                    <trim prefixOverrides="AND | OR">
+                    <if test="roles.length > 0">
+                        EXISTS (
+                            SELECT r.asm_id FROM ASM_ACCESS_ROLES AS r
+                            WHERE
+                                r.asm_id = asm.id
+                                AND r.role_name IN
+                                <foreach collection="roles" item="role" open="(" close=")" separator=",">
+                                    #{role}
+                                </foreach>
+                        )
+                    </if>
+                        OR NOT EXISTS (
+                            SELECT r.asm_id FROM ASM_ACCESS_ROLES AS r
+                            WHERE r.asm_id = asm.id
+                        )
+                    </trim>
+                )
+            </if>
+        </where>
+    </select>
+
+    <select id="selectAttrByName"
+            parameterType="map"
+            resultType="com.softmotions.ncms.asm.AsmAttribute">
+        SELECT
+            attr.*
+        FROM ASM_ATTRS attr
+        WHERE attr.asm_id = #{asm_id}
+              AND attr.name = #{name}
+    </select>
+
+    <update id="renameAttribute"
+            parameterType="map">
+        UPDATE ASM_ATTRS
+        SET name = #{new_name}
+        WHERE name = #{old_name}
+              AND asm_id = #{asm_id}
+    </update>
+
+
+    <update id="renameAttributeChilds"
+            parameterType="map">
+        UPDATE ASM_ATTRS
+        SET name = #{new_name}
+        WHERE name = #{old_name}
+              AND asm_id IN (SELECT
+                                 asm_id
+                             FROM ASM_PARENTS
+                             WHERE asm_parent_id = #{parent_id})
+    </update>
+
+
+    <select id="selectNotEmptyChilds"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            DISTINCT
+            p2.asm_parent_id
+        FROM ASM_PARENTS AS p1
+            INNER JOIN ASM_PARENTS p2 ON p2.asm_parent_id = p1.asm_id
+        WHERE p1.asm_parent_id = #{parent_id}
+    </select>
+
+
+    <delete id="deleteAttribute"
+            parameterType="map">
+        DELETE FROM ASM_ATTRS
+        WHERE name = #{name}
+              AND asm_id = #{asm_id}
+    </delete>
+
+
+    <delete id="deleteAttributeFromChilds"
+            parameterType="map">
+        DELETE FROM ASM_ATTRS
+        WHERE
+            name = #{name}
+            AND asm_id IN (
+                SELECT
+                    ap.asm_id
+                FROM ASM_PARENTS AS ap
+                WHERE ap.asm_parent_id = #{parent_id}
+            )
+    </delete>
+
+
+    <insert id="insertAttribute"
+            databaseId="DB2"
+            parameterType="com.softmotions.ncms.asm.AsmAttribute">
+        INSERT INTO ASM_ATTRS
+        (id, asm_id, name, label, type, options, required, value, large_value, mdate)
+        VALUES (SEQ_ATTR_ID.NEXTVAL, #{asmId}, #{name}, #{label}, #{type}, #{options}, #{required}, #{value}, #{largeValue}, now())
+    </insert>
+
+    <insert id="insertAttribute"
+            databaseId="POSTGRES"
+            parameterType="com.softmotions.ncms.asm.AsmAttribute">
+        INSERT INTO ASM_ATTRS
+        (id, asm_id, name, label, type, options, required, value, large_value, mdate)
+        VALUES (NEXTVAL('SEQ_ATTR_ID'), #{asmId}, #{name}, #{label}, #{type}, #{options}, #{required}, #{value}, #{largeValue}, now())
+    </insert>
+
+
+    <update id="updateAttribute"
+            parameterType="com.softmotions.ncms.asm.AsmAttribute">
+        UPDATE ASM_ATTRS
+        SET
+            label       = #{label},
+            type        = #{type},
+            options     = #{options},
+            value       = #{value},
+            large_value = #{largeValue},
+            required    = #{required}
+        WHERE asm_id = #{asmId}
+              AND name = #{name}
+    </update>
+
+    <select id="prevAttrID"
+            databaseId="DB2"
+            resultType="long"
+            useCache="false">
+        SELECT
+        PREVIOUS VALUE FOR SEQ_ATTR_ID
+        FROM SYSIBM.DUAL
+    </select>
+
+    <select id="prevAttrID"
+            databaseId="POSTGRES"
+            resultType="long"
+            useCache="false">
+        SELECT
+        CURRVAL('SEQ_ATTR_ID')
+    </select>
+
+    <update id="updateAssemblyProps"
+            parameterType="map">
+        UPDATE ASMS
+        <set>
+            <if test="template != null">template = #{template},</if>
+            <if test="template_mode != null">template_mode = #{template_mode},</if>
+            <if test="published != null">published = #{published},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="controller != null">controller = #{controller},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+
+    <update id="exchangeAttributesOrdinal"
+            parameterType="map">
+        UPDATE ASM_ATTRS a1
+        SET ordinal = (SELECT
+                              a2.ordinal
+                          FROM ASM_ATTRS a2
+                          WHERE a2.ordinal IN (#{ordinal1}, #{ordinal2})
+                                AND a1.ordinal != a2.ordinal),
+            mdate   = CURRENT_TIMESTAMP
+        WHERE ordinal IN (#{ordinal1}, #{ordinal2})
+    </update>
+
+    <select id="selectAsmIdByOrdinal"
+            parameterType="long"
+            resultType="long">
+        SELECT asm_id FROM ASM_ATTRS WHERE ordinal = #{ordinal}
+    </select>
+
+
+    <select id="selectAsmTParents"
+            resultType="map"
+            parameterType="long">
+        SELECT
+            a.type AS "type",
+            p.id   AS "pid",
+            p.name AS "pname",
+            p.type AS "ptype"
+        FROM ASMS a
+            LEFT JOIN ASMS np ON a.nav_parent_id = np.id
+            LEFT JOIN ASM_PARENTS AS ap ON ap.asm_id = np.id
+            LEFT JOIN ASMS p ON p.id = ap.asm_parent_id AND p.template = ${SQL.TRUE.LITERAL}
+        WHERE a.id = #{id}
+    </select>
+</mapper>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.softmotions.ncms.user.UserEnvRS">
+
+    <cache-ref namespace="com.softmotions.ncms.db.cache.asm"/>
+
+    <select id="getSet"
+            databaseId="DB2"
+            resultType="map"
+            parameterType="map">
+        SELECT
+            svalue AS "svalue",
+            ivalue AS "ivalue"
+        FROM USER_ENV
+        WHERE "USERID" = #{userid}
+              AND "TYPE" = #{type}
+    </select>
+
+    <select id="getSet"
+            databaseId="POSTGRES"
+            resultType="map"
+            parameterType="map">
+        SELECT
+            svalue AS "svalue",
+            ivalue AS "ivalue"
+        FROM USER_ENV
+        WHERE userid = #{userid}
+              AND type = #{type}
+    </select>
+
+    <update id="addSet"
+            databaseId="DB2"
+            parameterType="map">
+        MERGE INTO USER_ENV e
+        USING (
+                  VALUES (#{userid}, #{type}, #{value})
+              ) AS s("USERID", "TYPE", ${vcol})
+        ON e.userid = s.userid AND e.type = s.type AND e.${vcol} = s.${vcol}
+        WHEN NOT MATCHED THEN
+        INSERT ("USERID", "TYPE", ${vcol})
+        VALUES (s.userid, s.type, s.${vcol})
+        ELSE IGNORE
+    </update>
+
+    <update id="addSet"
+            databaseId="POSTGRES"
+            parameterType="map">
+        WITH
+        new_set (userid, type, ${vcol}) AS (VALUES (#{userid}, #{type},
+            <if test="vcol == 'ivalue'">#{value}::int</if>
+            <if test="vcol == 'svalue'">#{value}</if>
+        ))
+        INSERT INTO USER_ENV (userid, type, ${vcol})
+          SELECT userid, type, ${vcol}
+          FROM new_set
+          WHERE NOT EXISTS (SELECT 1 FROM USER_ENV u
+                              WHERE u.userid = new_set.userid
+                              AND u.type = new_set.type
+                              AND u.${vcol} = new_set.${vcol})
+    </update>
+
+    <delete id="delSet"
+            databaseId="DB2"
+            parameterType="map">
+        DELETE FROM USER_ENV
+        WHERE "USERID" = #{userid}
+              AND "TYPE" = #{type}
+              AND ${vcol} = #{value}
+    </delete>
+
+    <delete id="delSet"
+            databaseId="POSTGRES"
+            parameterType="map">
+        DELETE FROM USER_ENV
+        WHERE userid = #{userid}
+              AND type = #{type}
+              <if test="vcol == 'ivalue'">AND ${vcol} = #{value}::int</if>
+              <if test="vcol == 'svalue'">AND ${vcol} = #{value}</if>
+    </delete>
+
+    <delete id="delAllSet"
+            databaseId="DB2"
+            parameterType="map">
+        DELETE FROM USER_ENV
+        WHERE "USERID" = #{userid}
+        AND "TYPE" = #{type}
+    </delete>
+
+    <delete id="delAllSet"
+            databaseId="POSTGRES"
+            parameterType="map">
+        DELETE FROM USER_ENV
+        WHERE userid = #{userid}
+              AND type = #{type}
+    </delete>
+</mapper>
+
+

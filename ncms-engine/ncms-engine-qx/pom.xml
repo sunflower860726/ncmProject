@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>ncms-engine</artifactId>
+        <groupId>softmotions</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>ncms-engine-qx</artifactId>
+    <packaging>qooxdoo-jar</packaging>
+
+    <properties>
+        <qooxdoo.build.job>build</qooxdoo.build.job>
+        <qooxdoo.application.name>ncms</qooxdoo.application.name>
+        <qooxdoo.application.summary>${project.name}</qooxdoo.application.summary>
+        <qooxdoo.application.description>${project.description}</qooxdoo.application.description>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>softmotions</groupId>
+                <artifactId>qooxdoo-maven-plugin</artifactId>
+                <version>1.2-SNAPSHOT</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <namespace>${qooxdoo.application.name}</namespace>
+                    <buildJob>${qooxdoo.build.job}</buildJob>
+                    <modulesCacheDirectory>${project.basedir}/../../.cache</modulesCacheDirectory>
+                    <cacheDirectory>${project.basedir}/../../.cache/.qx</cacheDirectory>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- explicitly define maven-deploy-plugin after other to force exec order -->
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
+                <executions>
+                    <execution>
+                        <id>deploy</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.qooxdoo</groupId>
+            <artifactId>qooxdoo-sdk</artifactId>
+            <version>${qooxdoo.sdk.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>softmotions</groupId>
+            <artifactId>qx-client</artifactId>
+            <classifier>sources</classifier>
+            <version>1.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

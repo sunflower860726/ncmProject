@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.softmotions.ncms.mtt.MttRulesRS">
+
+    <!--==================================================-->
+    <!--==================== RULES =======================-->
+    <!--==================================================-->
+
+    <select id="selectRules" resultType="map" parameterType="map">
+        SELECT
+            rule.id      AS "id",
+            rule.name    AS "name",
+            rule.ordinal AS "ordinal",
+            rule.cdate   AS "cdate",
+            rule.mdate   AS "mdate",
+            rule.flags   AS "flags",
+            rule.enabled AS "enabled"
+        FROM mtt_rules rule
+        <where>
+            <if test="name != null">LOWER(rule.name) LIKE #{name}</if>
+        </where>
+        <if test="CQ_ORDERBY">ORDER BY ${CQ_ORDERBY}</if>
+        <if test="CQ_LIMIT">
+            LIMIT ${CQ_LIMIT}
+            <if test="CQ_OFFSET">
+                OFFSET ${CQ_OFFSET}
+            </if>
+        </if>
+    </select>
+
+    <select id="selectRulesCount" resultType="long" parameterType="map">
+        SELECT COUNT(*) FROM mtt_rules rule
+        <where>
+            <if test="name != null">LOWER(rule.name) LIKE #{name}</if>
+        </where>
+    </select>
+
+    <select id="selectRuleById" resultType="com.softmotions.ncms.mtt.MttRule" parameterType="long">
+        SELECT
+            rule.id          AS "id",
+            rule.name        AS "name",
+            rule.description AS "description",
+            rule.ordinal     AS "ordinal",
+            rule.cdate       AS "cdate",
+            rule.mdate       AS "mdate",
+            rule.enabled     AS "enabled",
+            rule.flags       AS "flags"
+        FROM mtt_rules rule
+        WHERE rule.id = #{id}
+    </select>
+
+    <select id="selectRuleIdByName"
+            resultType="long"
+            parameterType="string">
+        SELECT rule.id
+        FROM mtt_rules rule
+        WHERE rule.name = #{name}
+    </select>
+
+    <select id="selectMaxRuleId" resultType="long">
+        SELECT MAX(rule.id)
+        FROM mtt_rules rule
+    </select>
+
+    <insert id="insertRule"
+            databaseId="DB2"
+            parameterType="com.softmotions.ncms.mtt.MttRule">
+        INSERT INTO mtt_rules (id, name, cdate, mdate, enabled, flags)
+        VALUES (seq_mtt_rule_id.nextval, #{name},
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+                #{enabled}, #{flags})
+    </insert>
+
+    <insert id="insertRule"
+            databaseId="POSTGRES"
+            parameterType="com.softmotions.ncms.mtt.MttRule">
+        INSERT INTO mtt_rules (id, name, cdate, mdate, enabled, flags)
+        VALUES (NEXTVAL('seq_mtt_rule_id'), #{name},
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+        #{enabled}, #{flags})
+    </insert>
+
+    <update id="updateRuleName" parameterType="map">
+        UPDATE mtt_rules
+        SET name  = #{name},
+            mdate = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteRuleById" parameterType="long">
+        DELETE
+        FROM mtt_rules
+        WHERE id = #{id}
+    </delete>
+
+    <update id="updateRule" parameterType="com.softmotions.ncms.mtt.MttRule">
+        UPDATE mtt_rules
+        SET flags       = #{flags},
+            description = #{description},
+            mdate       = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectPreviousRule" resultType="long" parameterType="long">
+        SELECT rule.ordinal
+        FROM mtt_rules rule
+        WHERE rule.ordinal &lt; #{ordinal}
+        ORDER BY ordinal DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectNextRule" resultType="long" parameterType="long">
+        SELECT rule.ordinal
+        FROM mtt_rules rule
+        WHERE rule.ordinal &gt; #{ordinal}
+        ORDER BY ordinal ASC
+        LIMIT 1
+    </select>
+
+    <update id="exchangeRuleOrdinal"
+            databaseId="DB2"
+            parameterType="map">
+        UPDATE mtt_rules a1
+        SET a1.ordinal = (SELECT a2.ordinal
+                          FROM mtt_rules a2
+                          WHERE a2.ordinal IN (#{ordinal1}, #{ordinal2})
+                                AND a1.ordinal != a2.ordinal),
+            a1.mdate   = CURRENT_TIMESTAMP
+        WHERE a1.ordinal IN (#{ordinal1}, #{ordinal2})
+    </update>
+
+    <update id="exchangeRuleOrdinal"
+            databaseId="POSTGRES"
+            parameterType="map">
+        UPDATE mtt_rules a1
+        SET ordinal = (SELECT a2.ordinal
+                            FROM mtt_rules a2
+                            WHERE a2.ordinal IN (#{ordinal1}, #{ordinal2})
+                               AND a1.ordinal != a2.ordinal),
+          mdate   = CURRENT_TIMESTAMP
+        WHERE a1.ordinal IN (#{ordinal1}, #{ordinal2})
+    </update>
+
+    <update id="updateRuleEnabled" parameterType="map">
+        UPDATE mtt_rules
+        SET enabled = #{enabled},
+            mdate   = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="setRuleFirst" parameterType="map">
+        UPDATE mtt_rules a1
+        SET ordinal = (CASE id WHEN #{id} THEN 1 ELSE ordinal+1 END)
+    </update>
+
+    <!--==================================================-->
+    <!--================== FILTERS =======================-->
+    <!--==================================================-->
+
+    <select id="selectFilters" resultType="map" parameterType="map">
+        SELECT
+            filter.id          AS "id",
+            filter.rule_id     AS "ruleId",
+            filter.type        AS "type",
+            filter.spec        AS "spec",
+            filter.description AS "description",
+            filter.cdate       AS "cdate",
+            filter.mdate       AS "mdate",
+            filter.enabled     AS "enabled"
+        FROM mtt_filters filter
+        WHERE filter.rule_id = #{rid}
+        <if test="CQ_ORDERBY">ORDER BY ${CQ_ORDERBY}</if>
+        <if test="CQ_LIMIT">
+            LIMIT ${CQ_LIMIT}
+            <if test="CQ_OFFSET">
+                OFFSET ${CQ_OFFSET}
+            </if>
+        </if>
+        ORDER BY cdate DESC
+    </select>
+
+    <select id="selectFiltersCount" resultType="long" parameterType="map">
+        SELECT COUNT(*)
+        FROM mtt_filters filter
+        WHERE filter.rule_id = #{rid}
+    </select>
+
+    <select id="selectFilterById" resultType="com.softmotions.ncms.mtt.MttRuleFilter" parameterType="long">
+        SELECT
+            filter.id          AS "id",
+            filter.rule_id     AS "ruleId",
+            filter.type        AS "type",
+            filter.description AS "description",
+            filter.cdate       AS "cdate",
+            filter.mdate       AS "mdate",
+            filter.spec        AS "spec",
+            filter.enabled     AS "enabled"
+        FROM mtt_filters filter
+        WHERE filter.id = #{id}
+    </select>
+
+    <delete id="deleteFilterById" parameterType="long">
+        DELETE
+        FROM mtt_filters
+        WHERE id = #{id}
+    </delete>
+
+    <insert id="insertFilter"
+            parameterType="com.softmotions.ncms.mtt.MttRuleFilter"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO mtt_filters (type, rule_id, spec, description, enabled, cdate, mdate)
+        VALUES (#{type}, #{ruleId}, #{spec}, #{description}, #{enabled}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateFilter" parameterType="com.softmotions.ncms.mtt.MttRuleFilter">
+        UPDATE mtt_filters
+        SET
+            type        = #{type},
+            spec        = #{spec},
+            description = #{description},
+            enabled     = #{enabled},
+            mdate       = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!--==================================================-->
+    <!--================== ACTIONS =======================-->
+    <!--==================================================-->
+
+    <select id="selectActions" resultType="map" parameterType="map">
+        SELECT
+            action.id           AS "id",
+            action.rule_id      AS "ruleId",
+            action.group_id     AS "groupId",
+            action.group_weight AS "groupWeight",
+            action.type         AS "type",
+            action.ordinal      AS "ordinal",
+            action.spec         AS "spec",
+            action.description  AS "description",
+            action.cdate        AS "cdate",
+            action.mdate        AS "mdate",
+            action.enabled      AS "enabled"
+        FROM MTT_ACTIONS action
+        WHERE action.rule_id = #{rid}
+        <if test="CQ_ORDERBY">ORDER BY ${CQ_ORDERBY}</if>
+        <if test="CQ_LIMIT">
+            LIMIT ${CQ_LIMIT}
+            <if test="CQ_OFFSET">
+                OFFSET ${CQ_OFFSET}
+            </if>
+        </if>
+    </select>
+
+    <select id="selectActionsCount" resultType="long" parameterType="map">
+        SELECT COUNT(*)
+        FROM mtt_actions action
+        WHERE action.rule_id = #{rid}
+    </select>
+
+    <insert id="insertAction"
+            databaseId="DB2"
+            parameterType="com.softmotions.ncms.mtt.MttRuleAction"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO mtt_actions (id, type, rule_id, group_id, spec, description, cdate, mdate)
+        VALUES (seq_mtt_action_id.nextval, #{type}, #{ruleId}, #{groupId}, #{spec}, #{description}, CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP)
+    </insert>
+
+    <insert id="insertAction"
+            databaseId="POSTGRES"
+            parameterType="com.softmotions.ncms.mtt.MttRuleAction"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO mtt_actions (id, type, rule_id, group_id, spec, description, cdate, mdate)
+        VALUES (NEXTVAL('seq_mtt_action_id'), #{type}, #{ruleId}, #{groupId}, #{spec}, #{description}, CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="updateAction" parameterType="com.softmotions.ncms.mtt.MttRuleAction">
+        UPDATE mtt_actions
+        SET
+            type         = #{type},
+            spec         = #{spec},
+            description  = #{description},
+            group_weight = #{groupWeight},
+            enabled      = #{enabled},
+            mdate        = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateActionWidth" parameterType="map">
+        UPDATE mtt_actions
+        SET
+            group_weight = #{weight},
+            mdate        = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectActionById" resultType="com.softmotions.ncms.mtt.MttRuleAction" parameterType="long">
+        SELECT
+            action.id           AS "id",
+            action.rule_id      AS "ruleId",
+            action.group_id     AS "groupId",
+            action.group_weight AS "groupWeight",
+            action.ordinal      AS "ordinal",
+            action.type         AS "type",
+            action.description  AS "description",
+            action.spec         AS "spec",
+            action.cdate        AS "cdate",
+            action.mdate        AS "mdate",
+            action.enabled      AS "enabled"
+        FROM mtt_actions action
+        WHERE action.id = #{id}
+    </select>
+
+    <delete id="deleteActionById" parameterType="long">
+        DELETE
+        FROM mtt_actions
+        WHERE id = #{id}
+    </delete>
+
+    <select id="selectPreviousRuleAction" resultType="long" parameterType="map">
+        SELECT action.ordinal
+        FROM MTT_ACTIONS action
+        WHERE action.rule_id = #{rid} AND action.ordinal &lt; #{ordinal}
+        <choose>
+            <when test="groupId != null">
+                AND action.group_id = #{groupId}
+            </when>
+            <otherwise>
+                AND action.group_id IS NULL
+            </otherwise>
+        </choose>
+        ORDER BY ordinal DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectNextRuleAction" resultType="long" parameterType="map">
+        SELECT action.ordinal
+        FROM MTT_ACTIONS action
+        WHERE action.rule_id = #{rid} AND action.ordinal &gt; #{ordinal}
+        <choose>
+            <when test="groupId != null">
+                AND action.group_id = #{groupId}
+            </when>
+            <otherwise>
+                AND action.group_id IS NULL
+            </otherwise>
+        </choose>
+        ORDER BY ordinal ASC
+        LIMIT 1
+    </select>
+
+    <update id="exchangeActionOrdinal"
+            databaseId="DB2"
+            parameterType="map">
+        UPDATE mtt_actions a1
+        SET a1.ordinal = (SELECT a2.ordinal
+                          FROM mtt_actions a2
+                          WHERE a2.ordinal IN (#{ordinal1}, #{ordinal2})
+                                AND a1.ordinal != a2.ordinal),
+            a1.mdate   = CURRENT_TIMESTAMP
+        WHERE a1.ordinal IN (#{ordinal1}, #{ordinal2})
+    </update>
+
+    <update id="exchangeActionOrdinal"
+            databaseId="POSTGRES"
+            parameterType="map">
+        UPDATE mtt_actions a1
+        SET ordinal = (SELECT a2.ordinal
+                            FROM mtt_actions a2
+                            WHERE a2.ordinal IN (#{ordinal1}, #{ordinal2})
+                                AND a1.ordinal != a2.ordinal),
+          mdate   = CURRENT_TIMESTAMP
+        WHERE a1.ordinal IN (#{ordinal1}, #{ordinal2})
+    </update>
+</mapper>

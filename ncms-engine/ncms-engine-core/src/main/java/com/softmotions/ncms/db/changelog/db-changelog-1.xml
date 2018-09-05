@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+
+
+    <!-- ==================================================================== -->
+    <!-- ====================== ASSEMBLY TABLES ============================= -->
+    <!-- ==================================================================== -->
+
+    <changeSet id="1" author="adamansky@gmail.com" dbms="db2">
+
+        <!-- ===================== ASM CORE ========================== -->
+
+        <createTable tableName="ASM_CORES">
+            <column name="ID" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="LOCATION" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="VARCHAR(255)">
+            </column>
+            <column name="TEMPLATE_ENGINE" type="VARCHAR(255)">
+            </column>
+        </createTable>
+
+        <createIndex tableName="ASM_CORES"
+                     indexName="IDX_ASMCORES_LOCATION"
+                     unique="true">
+            <column name="LOCATION"/>
+        </createIndex>
+
+
+        <!-- ===================== ASMS ========================== -->
+
+        <createTable tableName="ASMS"
+                     remarks="Assemblies">
+            <column name="ID" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ASM_CORE_ID" type="BIGINT">
+            </column>
+            <column name="NAME" type="VARCHAR(127)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="HNAME" type="VARCHAR(127)"
+                    remarks="Human name for page assemblies">
+            </column>
+            <column name="MDATE" type="TIMESTAMP"
+                    remarks="Assembly modification date"/>
+            <column name="MUSER" type="VARCHAR(64)"
+                    remarks="Username which modified this assembly"/>
+            <column name="OWNER" type="VARCHAR(64)"
+                    remarks="Username of page assembly owner"/>
+            <column name="PUBLISHED" type="${tinyint.type}"
+                    defaultValueNumeric="0"
+                    remarks="Published boolean flag for page assemblies"/>
+            <column name="TEMPLATE" type="${tinyint.type}"
+                    defaultValueNumeric="0"
+                    remarks="Use this page assembly as template for other pages"/>
+            <column name="CONTROLLER" type="VARCHAR(127)"
+                    remarks="Classname of assembly controller">
+            </column>
+            <column name="TYPE" type="VARCHAR(64)" defaultValue="">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OPTIONS" type="VARCHAR(512)"/>
+            <column name="DESCRIPTION" type="VARCHAR(255)"/>
+            <column name="NAV_PARENT_ID" type="BIGINT"
+                    remarks="Navigation parent ref for assemblies of `page` type">
+            </column>
+            <column name="NAV_CACHED_PATH" type="VARCHAR(255)"
+                    remarks="Cached path of IDs joined with / eg.: /123/12/334/">
+            </column>
+            <column name="RECURSIVE_ACL_ID" type="BIGINT"
+                    remarks="ID of recursive Access list (ASM_ACL_ENTITY.ACL_ID)">
+            </column>
+            <column name="LOCAL_ACL_ID" type="BIGINT"
+                    remarks="ID of local Access list (ASM_ACL_ENTITY.ACL_ID)">
+            </column>
+        </createTable>
+
+        <createIndex tableName="ASMS"
+                     indexName="IDX_ASMS_NAMETYPE"
+                     unique="true">
+            <column name="NAME"/>
+            <column name="TYPE"/>
+        </createIndex>
+
+        <createIndex tableName="ASMS"
+                     indexName="IDX_ASMS_TYPENAME">
+            <column name="TYPE"/>
+            <column name="NAME"/>
+        </createIndex>
+
+        <createIndex tableName="ASMS" indexName="IDX_ASMS_NAVPARENT">
+            <column name="NAV_PARENT_ID"/>
+        </createIndex>
+
+        <createIndex tableName="ASMS" indexName="IDX_ASMS_NAVCACHEDPATH">
+            <column name="NAV_CACHED_PATH"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseTableName="ASMS"
+                                 baseColumnNames="NAV_PARENT_ID"
+                                 constraintName="FK_ASMS_NAVPARENT"
+                                 referencedTableName="ASMS"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="ASMS"
+                                 baseColumnNames="ASM_CORE_ID"
+                                 constraintName="FK_ASMS_ASMCORES"
+                                 referencedTableName="ASM_CORES"
+                                 referencedColumnNames="ID"
+                                 onDelete="SET NULL"/>
+
+        <!-- ====================== ASM_ACL ====================== -->
+
+
+        <createSequence sequenceName="SEQ_ACL_ID"/>
+
+        <createTable tableName="ASM_ACL_ENTITY">
+            <column name="ACL_ID" type="BIGINT"
+                    remarks="ACL ID created by: CALL NEXT VALUE FOR SEQ_ACL_ID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USER" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="RIGHTS" type="VARCHAR(4)"
+                    remarks="Access rights mask, eg: rw (read-write)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+
+        <!-- ==================== ASM_SYSTAGS ==================== -->
+
+        <createTable tableName="ASM_SYSPROPS"
+                     remarks="System tags assigned to assembly">
+            <column name="ASM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PROPERTY" type="VARCHAR(127)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="VALUE" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="ASM_SYSPROPS" indexName="IDX_ASMSYSPROPS_FWD"
+                     unique="true">
+            <column name="ASM_ID"/>
+            <column name="PROPERTY"/>
+            <column name="VALUE"/>
+        </createIndex>
+
+        <createIndex tableName="ASM_SYSPROPS" indexName="IDX_ASMSYSPROPS_BWD"
+                     unique="true">
+            <column name="PROPERTY"/>
+            <column name="ASM_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseTableName="ASM_SYSPROPS"
+                                 baseColumnNames="ASM_ID"
+                                 constraintName="FK_ASMSYSPROPS_ASMS"
+                                 referencedTableName="ASMS"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+        <!-- ==================== ASM_ATTRS ======================= -->
+
+        <createTable tableName="ASM_ATTRS"
+                     remarks="Assembly attributes">
+            <column name="ASM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="VARCHAR(127)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="LABEL" type="VARCHAR(64)"
+                    remarks="Attribute label displayed in page GUI">
+            </column>
+            <column name="TYPE" type="VARCHAR(127)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="OPTIONS" type="VARCHAR(1024)"/>
+            <column name="VALUE" type="VARCHAR(1024)"/>
+            <column name="LARGE_VALUE" type="CLOB"/>
+            <column name="ORDINAL" type="INT"
+                    remarks="Attributes sorting ordinal"
+                    autoIncrement="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="REQUIRED" type="${tinyint.type}"
+                    defaultValueNumeric="0"
+                    remarks="Required boolean flag for page assembly attributes">
+                <constraints nullable="false"/>
+            </column>
+            <column name="MDATE" type="TIMESTAMP"
+                    remarks="Attribute modification date"/>
+        </createTable>
+
+        <createIndex tableName="ASM_ATTRS"
+                     indexName="IDX_ASMATTRS_UNIQ"
+                     unique="true">
+            <column name="NAME"/>
+            <column name="ASM_ID"/>
+        </createIndex>
+
+        <createIndex tableName="ASM_ATTRS"
+                     indexName="IDX_ASMATTRS_ORDINAL"
+                     unique="false">
+            <column name="ORDINAL"/>
+        </createIndex>
+
+
+        <!-- FK ASM_ATTRS => ASM  -->
+        <addForeignKeyConstraint baseTableName="ASM_ATTRS"
+                                 baseColumnNames="ASM_ID"
+                                 constraintName="FK_ASMATTRS_ASM"
+                                 referencedTableName="ASMS"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+        <!-- ================ ASSEMBLY PARENTS ==================== -->
+
+        <createTable tableName="ASM_PARENTS">
+            <column name="ASM_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ASM_PARENT_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="ASM_PARENTS"
+                     indexName="IDX_ASMPARENTS_UNIQ"
+                     unique="true">
+            <column name="ASM_ID"/>
+            <column name="ASM_PARENT_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseTableName="ASM_PARENTS"
+                                 baseColumnNames="ASM_ID"
+                                 constraintName="FK_ASMPARENTS_ASMID"
+                                 referencedTableName="ASMS"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="ASM_PARENTS"
+                                 baseColumnNames="ASM_PARENT_ID"
+                                 constraintName="FK_ASMPARENTS_ASMPARENTID"
+                                 referencedTableName="ASMS"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+    </changeSet>
+
+    <!-- ==================================================================== -->
+    <!-- ====================== MEDIA TABLES ================================ -->
+    <!-- ==================================================================== -->
+
+    <changeSet id="2" author="adamansky@gmail.com" dbms="db2">
+
+        <!-- ================ MEDIA_ENTITY ==================== -->
+
+        <createTable tableName="MEDIA_ENTITY">
+            <column name="ID" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="NAME" type="VARCHAR(127)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STATUS" type="INT"
+                    remarks="If status: 1 - it is folder, 0 - otherwise">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FOLDER" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="CONTENT_TYPE" type="VARCHAR(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="PUT_CONTENT_TYPE" type="VARCHAR(64)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="CONTENT_LENGTH" type="INT">
+                <constraints nullable="true"/>
+            </column>
+            <column name="DESCRIPTION" type="VARCHAR(255)">
+            </column>
+            <column name="MDATE" type="TIMESTAMP">
+            </column>
+            <column name="TAGS" type="VARCHAR(1024)">
+            </column>
+            <column name="ICON" type="BLOB"
+                    remarks="Image media file thumbnail">
+            </column>
+            <column name="ICON_CONTENT_TYPE" type="VARCHAR(64)">
+            </column>
+            <column name="META" type="VARCHAR(2048)"
+                    remarks="Key-value options map with file metadata generated by Tika"/>
+            <column name="OWNER" type="VARCHAR(127)"
+                    remarks="File cleator user id">
+            </column>
+            <column name="CSUM" type="VARCHAR(48)"
+                    remarks="File checksum">
+            </column>
+            <column name="SYSTEM" type="${tinyint.type}"
+                    defaultValueNumeric="0"
+                    remarks="True if is a system file managed by admins">
+                <constraints nullable="false"/>
+            </column>
+            <column name="FLAGS" type="INT"
+                    defaultValueNumeric="0"
+                    remarks="Various flags bitmask">
+            </column>
+        </createTable>
+
+        <createIndex tableName="MEDIA_ENTITY"
+                     indexName="IDX_MEDIAENTITY_NAME">
+            <column name="NAME"/>
+        </createIndex>
+
+        <createIndex tableName="MEDIA_ENTITY"
+                     indexName="IDX_MEDIAENTITY_FOLDER">
+            <column name="FOLDER"/>
+        </createIndex>
+
+        <createIndex tableName="MEDIA_ENTITY"
+                     indexName="IDX_MEDIAENTITY_PATH"
+                     unique="true">
+            <column name="FOLDER"/>
+            <column name="NAME"/>
+        </createIndex>
+
+        <createIndex tableName="MEDIA_ENTITY"
+                     indexName="IDX_MEDIAENTITY_CSUM">
+            <column name="CSUM"/>
+        </createIndex>
+
+        <createTable tableName="MEDIA_ENTITY_KWORDS"
+                     remarks="Media entity keywords">
+            <column name="ENTITY_ID" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="KEYWORD" type="VARCHAR(24)"/>
+        </createTable>
+
+        <createIndex tableName="MEDIA_ENTITY_KWORDS"
+                     indexName="IDX_MEDIAENTITYKWORDS_FWD"
+                     unique="true">
+            <column name="KEYWORD"/>
+            <column name="ENTITY_ID"/>
+        </createIndex>
+
+        <createIndex tableName="MEDIA_ENTITY_KWORDS"
+                     indexName="IDX_MEDIAENTITYKWORDS_BWD"
+                     unique="true">
+            <column name="ENTITY_ID"/>
+            <column name="KEYWORD"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseTableName="MEDIA_ENTITY_KWORDS"
+                                 baseColumnNames="ENTITY_ID"
+                                 constraintName="FK_MEDIAENTITYKWORDS"
+                                 referencedTableName="MEDIA_ENTITY"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+
+        <!-- ================ MEDIA_ENTITY_REFS ==================== -->
+
+        <createTable tableName="MEDIA_ENTITY_REFS"
+                     remarks="References to media entities">
+            <column name="ENTITY_ID" type="BIGINT"/>
+            <column name="REFERER_ID" type="BIGINT"/>
+            <column name="REFERER_TYPE" type="VARCHAR(127)"/>
+        </createTable>
+
+        <createIndex tableName="MEDIA_ENTITY_REFS"
+                     indexName="IDX_MEDIAENTITYREFS_ALL"
+                     unique="true">
+            <column name="ENTITY_ID"/>
+            <column name="REFERER_TYPE"/>
+            <column name="REFERER_ID"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseTableName="MEDIA_ENTITY_REFS"
+                                 baseColumnNames="ENTITY_ID"
+                                 constraintName="FK_MEDIAENTITYREFS"
+                                 referencedTableName="MEDIA_ENTITY"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>
+
+
+        <!-- ==================== FK ============================= -->
+
+
+        <!--<addForeignKeyConstraint baseTableName="MEDIA_ENTITY_ACL"
+                                 baseColumnNames="OWNER_ID"
+                                 constraintName="FK_ACL_OWNER"
+                                 referencedTableName="MEDIA_ENTITY"
+                                 referencedColumnNames="ID"
+                                 onDelete="CASCADE"/>-->
+
+
+    </changeSet>
+
+</databaseChangeLog>

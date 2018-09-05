@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.softmotions.ncms.asm.PageRS">
+
+    <cache-ref namespace="com.softmotions.ncms.db.cache.asm"/>
+
+    <select id="selectPageInfoIN" resultType="map" parameterType="map">
+        SELECT
+        p.id AS "id",
+        p.name AS "guid",
+        p.hname AS "name"
+        FROM ASMS AS p
+        WHERE p.id IN
+        <foreach item="id" index="index" collection="ids"
+                 open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+
+    <select id="selectNavPath" resultType="map" parameterType="map">
+        SELECT
+            p.id              AS "id",
+            p.name            AS "guid",
+            p.hname           AS "name",
+            p.nav_cached_path AS "nav_cached_path"
+        FROM ASMS AS p
+        WHERE p.id = #{id}
+    </select>
+
+
+    <select id="selectChildLayer" resultType="map" parameterType="map">
+        SELECT
+            p.id              AS "id",
+            p.name            AS "guid",
+            p.hname           AS "name",
+            p.description     AS "description",
+            p.type            AS "type",
+            p.published       AS "published",
+            p.template        AS "template",
+            p.owner           AS "owner",
+            p.nav_cached_path AS "nav_cached_path",
+            lacl.rights       AS "local_rights",
+            racl.rights       AS "recursive_rights",
+            (SELECT COUNT(asm_id) FROM ASM_PARENTS WHERE asm_id = p.id) AS "num_parents"
+        FROM ASMS AS p
+            LEFT JOIN ASM_ACL_ENTITY AS lacl ON lacl.acl_id = p.local_acl_id AND lacl."USER" = #{user}
+            LEFT JOIN ASM_ACL_ENTITY AS racl ON racl.acl_id = p.recursive_acl_id AND racl."USER" = #{user}
+        WHERE p.nav_parent_id = #{nav_parent_id}
+              AND p.type LIKE #{page_type}
+        ORDER BY p.hname ASC
+    </select>
+
+
+    <select id="selectRootLayer" resultType="map" parameterType="map">
+        SELECT
+            p.id              AS "id",
+            p.name            AS "guid",
+            p.hname           AS "name",
+            p.description     AS "description",
+            p.type            AS "type",
+            p.published       AS "published",
+            p.template        AS "template",
+            p.owner           AS "owner",
+            p.nav_cached_path AS "nav_cached_path",
+            lacl.rights       AS "local_rights",
+            racl.rights       AS "recursive_rights",
+            (SELECT COUNT(asm_id) FROM ASM_PARENTS WHERE asm_id = p.id) AS "num_parents"
+        FROM ASMS AS p
+            LEFT JOIN ASM_ACL_ENTITY AS lacl ON lacl.acl_id = p.local_acl_id AND lacl."USER" = #{user}
+            LEFT JOIN ASM_ACL_ENTITY AS racl ON racl.acl_id = p.recursive_acl_id AND racl."USER" = #{user}
+        WHERE p.nav_parent_id IS NULL
+              AND p.type LIKE #{page_type}
+        ORDER BY p.hname ASC
+    </select>
+
+    <select id="selectParentID" resultType="long" parameterType="long">
+        SELECT
+            nav_parent_id
+        FROM ASMS
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectNumberOfDirectChilds" resultType="long" parameterType="long">
+        SELECT
+            COUNT(*)
+        FROM ASMS
+        WHERE nav_parent_id = #{id}
+        AND type != 'news.page'
+    </select>
+
+    <update id="mergeNewPage"
+            databaseId="DB2"
+            parameterType="map">
+        MERGE INTO ASMS a
+        USING (
+                  VALUES (#{guid}, #{name}, #{type},
+                          #{nav_parent_id,jdbcType=BIGINT},
+                          #{lang,jdbcType=CHAR},
+                          #{nav_cached_path},
+                          #{options,jdbcType=VARCHAR},
+                          CURRENT_TIMESTAMP, #{user}, #{user},
+                          #{description},
+                          #{recursive_acl})) AS s(
+              name, hname, type,
+              nav_parent_id,
+              lang,
+              nav_cached_path,
+              options,
+              mdate, muser, owner,
+              description,
+              recursive_acl_id)
+        ON a.name = s.name
+        WHEN MATCHED THEN
+        UPDATE SET
+            a.hname            = s.hname,
+            a.type             = s.type,
+            a.nav_parent_id    = s.nav_parent_id,
+            a.lang             = s.lang,
+            a.nav_cached_path  = s.nav_cached_path,
+            a.options          = s.options,
+            a.mdate            = s.mdate,
+            a.muser            = s.muser,
+            a.owner            = s.owner,
+            a.description      = s.description,
+            a.recursive_acl_id = s.recursive_acl_id
+        WHEN NOT MATCHED THEN
+        INSERT (name, hname, type,
+                nav_parent_id,
+                lang,
+                nav_cached_path,
+                options,
+                mdate, muser, owner,
+                description,
+                recursive_acl_id,
+                cdate,
+                ordinal)
+        VALUES (s.name, s.hname, s.type,
+                s.nav_parent_id,
+                s.lang,
+                s.nav_cached_path,
+                s.options,
+                s.mdate, s.muser, s.owner,
+                s.description,
+                s.recursive_acl_id,
+                CURRENT_TIMESTAMP,
+                SEQ_ASMS_ORDINAL.NEXTVAL)
+    </update>
+
+    <update id="mergeNewPage"
+            databaseId="POSTGRES"
+            parameterType="map">
+        INSERT INTO ASMS (name, hname, type,
+                          nav_parent_id,
+                          lang,
+                          nav_cached_path,
+                          options,
+                          mdate, muser, owner,
+                          description,
+                          recursive_acl_id,
+                          cdate,
+                          ordinal)
+        VALUES (#{guid}, #{name}, #{type},
+                         #{nav_parent_id,jdbcType=BIGINT},
+                         #{lang,jdbcType=CHAR},
+                         #{nav_cached_path},
+                         #{options,jdbcType=VARCHAR},
+                         CURRENT_TIMESTAMP, #{user}, #{user},
+                         #{description},
+                         #{recursive_acl_id},
+                         CURRENT_TIMESTAMP,
+                         NEXTVAL('SEQ_ASMS_ORDINAL'))
+        ON CONFLICT (name)
+            DO UPDATE SET (hname, type,
+                           nav_parent_id,
+                           lang,
+                           nav_cached_path,
+                           options,
+                           mdate, muser, owner,
+                           description,
+                           recursive_acl_id) =
+            (#{name}, #{type},
+                      #{nav_parent_id,jdbcType=BIGINT},
+                      #{lang,jdbcType=CHAR},
+                      #{nav_cached_path},
+                      #{options,jdbcType=VARCHAR},
+                      CURRENT_TIMESTAMP, #{user}, #{user},
+                      #{description},
+                      #{recursive_acl_id})
+    </update>
+
+
+    <update id="updatePageBasic" parameterType="map">
+        UPDATE ASMS
+        SET hname = #{hname}, type = #{type}, muser = #{muser}, description = #{description}
+        WHERE id = #{id}
+    </update>
+
+    <update id="movePage" parameterType="map">
+        UPDATE ASMS
+        SET nav_parent_id   = #{nav_parent_id,jdbcType=BIGINT},
+            lang            = #{lang,jdbcType=CHAR},
+            nav_cached_path = #{nav_cached_path}
+        WHERE id = #{id}
+    </update>
+
+    <update id="prepareMove" parameterType="map">
+        UPDATE ASMS
+        SET nav_cached_path = NULL
+        WHERE nav_cached_path LIKE #{nav_cached_path} || '%'
+    </update>
+
+    <update id="finishMove" parameterType="map">
+        UPDATE ASMS AS a
+        SET nav_cached_path = (SELECT p.nav_cached_path FROM ASMS AS p WHERE p.id = a.nav_parent_id) || a.nav_parent_id || '/'
+        WHERE id IN (SELECT a2.id FROM ASMS AS a2 INNER JOIN ASMS AS p2 ON a2.nav_parent_id = p2.id
+                                  WHERE a2.nav_cached_path IS NULL AND p2.nav_cached_path IS NOT NULL)
+    </update>
+
+    <update id="setPageOwner" parameterType="map">
+        UPDATE ASMS
+        SET owner = #{owner}
+        WHERE id = #{id}
+    </update>
+
+
+    <update id="updatePublishStatus" parameterType="map">
+        UPDATE ASMS
+        SET published = #{published}
+        WHERE id = #{id}
+    </update>
+
+
+    <select id="selectPageInfo" resultType="map" parameterType="map">
+        SELECT
+            p.id        AS "id",
+            p.hname     AS "name",
+            p.name      AS "guid",
+            p.type      AS "type",
+            p.mdate     AS "mdate",
+            p.muser     AS "muser",
+            p.owner     AS "owner",
+            p.published AS "published",
+            p.template  AS "template",
+            p.options   AS "options"
+        FROM ASMS AS p
+        WHERE p.id = #{id}
+    </select>
+
+    <select id="selectPageTemplateStatus" resultType="boolean" parameterType="long">
+        SELECT
+            p.template
+        FROM ASMS AS p
+        WHERE p.id = #{id}
+    </select>
+
+    <update id="updateAttribute"
+            databaseId="DB2"
+            parameterType="com.softmotions.ncms.asm.AsmAttribute">
+        UPDATE ASM_ATTRS
+        SET
+            options     = #{options},
+            value       = #{value},
+            large_value = #{largeValue},
+            mdate       = CURRENT_TIMESTAMP
+        WHERE asm_id = #{asmId}
+              AND name = #{name}
+    </update>
+
+
+    <update id="updateAttributeOptions"
+            parameterType="com.softmotions.ncms.asm.AsmAttribute">
+        UPDATE ASM_ATTRS
+        SET
+            options = #{options}
+        WHERE asm_id = #{asmId}
+              AND name = #{name}
+    </update>
+
+    <select id="prevAttrID"
+            databaseId="DB2"
+            resultType="long"
+            useCache="false">
+        SELECT
+        PREVIOUS VALUE FOR SEQ_ATTR_ID
+        FROM SYSIBM.DUAL
+    </select>
+
+    <select id="prevAttrID"
+            databaseId="POSTGRES"
+            resultType="long"
+            useCache="false">
+        SELECT
+        CURRVAL('SEQ_ATTR_ID')
+    </select>
+
+
+    <delete id="deleteAttrsByNames"
+            parameterType="map">
+        DELETE FROM ASM_ATTRS
+        WHERE asm_id = #{asmId}
+        AND name IN
+        <foreach item="name" index="index" collection="names"
+                 open="(" separator="," close=")">
+            #{name}
+        </foreach>
+    </delete>
+
+    <select id="getRecursiveAcl" resultType="long" parameterType="map">
+        SELECT
+            recursive_acl_id
+        FROM ASMS
+        WHERE id = #{pid}
+    </select>
+
+    <select id="searchPageCount" resultType="int" parameterType="map">
+        SELECT COUNT(p.id)
+        FROM ASMS AS p
+        <where>
+            <if test="parentId != null">AND p.nav_parent_id = #{parentId}</if>
+            <if test="name != null">AND p.hname LIKE #{name}</if>
+            <if test="name_lower != null">AND LOWER(p.hname) LIKE #{name_lower}</if>
+            <if test="type != null">AND p.type LIKE #{type}</if>
+            <if test="collection != null and user != null">
+                AND p.id IN (
+                SELECT e.ivalue FROM USER_ENV e
+                WHERE e.userid = #{user} AND e.type = #{collection}
+                )
+            </if>
+        </where>
+    </select>
+
+    <select id="searchPage" resultType="map" parameterType="map">
+        SELECT
+        p.id AS "id",
+        p.hname AS "hname",
+        p.owner AS "owner",
+        p.nav_cached_path AS "nav_cached_path",
+        p.published AS "published",
+        p.type AS "type",
+        lacl.rights AS "local_rights",
+        racl.rights AS "recursive_rights"
+        FROM ASMS AS p
+        LEFT JOIN ASM_ACL_ENTITY AS lacl ON lacl.acl_id = p.local_acl_id AND lacl."USER" = #{user}
+        LEFT JOIN ASM_ACL_ENTITY AS racl ON racl.acl_id = p.recursive_acl_id AND racl."USER" = #{user}
+        <where>
+            <if test="parentId != null">AND p.nav_parent_id = #{parentId}</if>
+            <if test="name != null">AND p.hname LIKE #{name}</if>
+            <if test="name_lower != null">AND LOWER(p.hname) LIKE #{name_lower}</if>
+            <if test="type != null">AND p.type LIKE #{type}</if>
+            <if test="collection != null and user != null">
+                AND p.id IN (
+                SELECT e.ivalue FROM USER_ENV e
+                WHERE e.userid = #{user} AND e.type = #{collection}
+                )
+            </if>
+        </where>
+        <if test="CQ_ORDERBY">order by ${CQ_ORDERBY}</if>
+        <if test="CQ_LIMIT">
+            LIMIT ${CQ_LIMIT}
+            <if test="CQ_OFFSET">
+                OFFSET ${CQ_OFFSET}
+            </if>
+        </if>
+    </select>
+
+    <select id="selectAttrOptions" resultType="map" parameterType="map">
+        SELECT
+            a.id         AS "id",
+            attr.options AS "options"
+        FROM ASM_ATTRS attr
+            INNER JOIN ASMS AS a ON attr.asm_id = a.id
+        WHERE attr.type = #{attrType}
+              AND a.type LIKE #{pageType}
+    </select>
+
+    <select id="selectCountOfAttrsDependentOn" resultType="long" parameterType="string">
+        SELECT
+            COUNT(*)
+        FROM ASM_PAGE_DEPS
+        WHERE asm_name = #{name}
+    </select>
+
+    <select id="selectAttributesDependentOn" resultType="map" parameterType="map">
+        SELECT
+            DISTINCT
+            attr.type AS "type",
+            attr.name AS "name"
+        FROM ASM_PAGE_DEPS AS d
+            INNER JOIN ASM_ATTRS AS attr ON attr.id = d.attr_id
+        WHERE d.asm_name = #{guid}
+              AND d.asm_id = #{asmid}
+    </select>
+
+
+    <select id="selectPagesDependentOn" resultType="map" parameterType="string">
+        SELECT
+            DISTINCT
+            asm.name      AS "guid",
+            asm.hname     AS "name",
+            asm.id        AS "asmid",
+            asm.published AS "published"
+        FROM ASM_PAGE_DEPS AS d
+            INNER JOIN ASMS AS asm ON d.asm_id = asm.id
+        WHERE
+            d.asm_name = #{name}
+        ORDER BY asm.hname
+    </select>
+
+    <select id="selectPagesDependentTo" resultType="map" parameterType="long">
+        SELECT
+            DISTINCT
+            asm.name        AS "guid",
+            asm.hname       AS "name",
+            asm.id          AS "asmid",
+            asm.asm_core_id AS "guid",
+            asm.published   AS "published"
+        FROM ASMS AS asm
+            INNER JOIN ASM_PAGE_DEPS d ON d.asm_name = asm.name
+        WHERE
+            d.asm_id = #{asmid}
+        ORDER BY asm.hname
+    </select>
+
+    <select id="selectCountOfPagesDependentOn" resultType="long" parameterType="string">
+        SELECT
+            COUNT(DISTINCT d.ASM_ID)
+        FROM ASM_PAGE_DEPS AS d
+        WHERE d.asm_name = #{name}
+    </select>
+
+    <select id="selectCountOfPagesDependentTo" resultType="long" parameterType="long">
+        SELECT
+            COUNT(DISTINCT d.asm_name)
+        FROM ASM_PAGE_DEPS AS d
+        WHERE d.asm_id = #{asmid}
+    </select>
+
+    <select id="selectOrphanPages" resultType="map" parameterType="string">
+        SELECT
+            asm.name      AS "guid",
+            asm.hname     AS "name",
+            asm.published AS "published"
+        FROM ASMS AS asm
+        WHERE asm.name NOT IN (SELECT asm_name FROM ASM_PAGE_DEPS)
+        ORDER BY asm.hname
+    </select>
+
+    <select id="selectOldLockedPages"
+            databaseId="DB2"
+            resultType="long"
+            parameterType="long">
+        SELECT
+            asm.id
+        FROM ASMS AS asm
+        WHERE
+              asm.lock_date IS NOT NULL
+              AND MIN(ABS(CAST((CURRENT_TIMESTAMP - asm.mdate) AS BIGINT)),
+                      ABS(CAST((CURRENT_TIMESTAMP - asm.lock_date) AS BIGINT))) >= #{maxsec,jdbcType=VARCHAR}
+    </select>
+
+
+    <select id="selectOldLockedPages"
+            databaseId="POSTGRES"
+            resultType="long"
+            parameterType="long">
+        SELECT
+            asm.id
+        FROM ASMS AS asm
+        WHERE
+            asm.lock_date IS NOT NULL
+            AND LEAST(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - asm.mdate))::BIGINT,
+                      EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - asm.lock_date))::BIGINT) >=  #{maxsec,jdbcType=BIGINT}
+    </select>
+
+
+    <delete id="deleteFileDeps" parameterType="long">
+        DELETE FROM ASM_MEDIA_DEPS
+        WHERE asm_id = #{id}
+    </delete>
+
+    <delete id="deletePageDeps" parameterType="long">
+        DELETE FROM ASM_PAGE_DEPS
+        WHERE asm_id = #{id}
+    </delete>
+
+</mapper>

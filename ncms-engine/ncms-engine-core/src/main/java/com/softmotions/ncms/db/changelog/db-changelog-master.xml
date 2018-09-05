@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+    <property name="tinyint.type" dbms="db2" value="SMALLINT"/>
+    <property name="boolean.type" dbms="db2" value="SMALLINT"/>
+    <property name="tinyint.type" dbms="postgresql" value="SMALLINT"/>
+    <property name="boolean.type" dbms="postgresql" value="BOOLEAN"/>
+
+    <include relativeToChangelogFile="true" file="db-changelog-1.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-3.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-4.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-5.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-6.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-7.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-8.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-9-pgsql-1.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-10.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-11.xml"/>
+    <include relativeToChangelogFile="true" file="db-changelog-12.xml"/>
+
+</databaseChangeLog>

@@ -1,0 +1,21 @@
+# Maven
+target/
+
+__pycache__
+
+# IDEA
+.idea/
+*.iml
+
+# NCMS
+.cache/
+/ncms-engine/ncms-engine-qx/target/
+/ncms-engine/ncms-engine-web/target/
+/ncms-engine/ncms-engine-solr/target/
+
+# Logs
+logs/
+
+
+.bin/
+*.log
